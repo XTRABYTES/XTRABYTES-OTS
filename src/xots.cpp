@@ -74,9 +74,8 @@ public:
 		else
 		{
 			for (std::vector<std::string>::const_iterator it = args.begin(); it != args.end(); ++it)
-			{
-				
-		   }
+			{}				
+		}
 		return Application::EXIT_OK;
 	}
 
