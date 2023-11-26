@@ -27,6 +27,8 @@ CXKeys::CXKeys() : fValid(false) {
 void CXKeys::Reset() {
        boost::recursive_mutex::scoped_lock lLock(r_mtx); 
        fValid = false; 
+       isSetSecKey = false;
+       isSetSecKeys = false;
        cs_seck = 0; cs_pubk = 0; cs_proof = 0; pubkey=0;
        sec_keys.clear();
        pub_keys.clear();
@@ -43,26 +45,71 @@ void CXKeys::MakeNewKeys() {
 	
    boost::recursive_mutex::scoped_lock lLock(r_mtx);
    Reset();
-   isSetSeckeys = false;
-   for (int i = 0; i < 8192; i++) {
-       std::vector<std::byte> skey_bytes;
-       skey_bytes.resize(32);	 	          
-	    int ret = RAND_priv_bytes(reinterpret_cast<unsigned char*>(skey_bytes.data()), 32);
-	    if (ret != 1) return;
-	   	    
-	    boost::multiprecision::uint256_t skey;	    	    
-	    boost::multiprecision::import_bits(skey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
-	    sec_keys.push_back(skey);   
-   }   
+   
+   std::vector<std::byte> skey_bytes;
+   skey_bytes.resize(32);	 	          
+   int ret = RAND_priv_bytes(reinterpret_cast<unsigned char*>(skey_bytes.data()), 32);
+   if (ret != 1) return;
+   	    	    	    
+   boost::multiprecision::import_bits(seckey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
+   isSetSecKey = true;	 
+	
+               
+   if (!ComputeSecKeys()) return;   
    
    if (!ComputeSubKeys()) return;
    fValid = true;
+      
+}
+
+bool CXKeys::ComputeSecKeys() {
+	boost::recursive_mutex::scoped_lock lLock(r_mtx);
+	
+	if (!isSetSecKey) return false;
+	
+   // build 128 x 64 matrix ( 8192 element )
+   std::vector<boost::multiprecision::uint256_t> sec_keys_x;
+   std::vector<boost::multiprecision::uint256_t> sec_keys_y;
    
+   boost::multiprecision::uint256_t keypool;
+   keypool = uint256Hash(seckey);  
+   for (int i = 0; i < 64; i++) {
+     keypool = uint256Hash(keypool);
+     sec_keys_x.push_back(keypool);
+   }
+
+   for (int i = 0; i < 128; i++) {
+     keypool = uint256Hash(keypool);
+     sec_keys_y.push_back(keypool);
+   }
+     	
+	
+   for (int i = 0; i < 8192; i++) {
+      
+    std::vector<std::byte> skey_bytes;
+    int x = i % 64;
+    int y = ((i - x) / 64);
+  
+    uint256Insert(sec_keys_x[x], skey_bytes);    
+    uint256Insert(sec_keys_y[y], skey_bytes);
+        
+    std::vector<std::byte> skey_hash_bytes;    
+    if (!computeHash(skey_bytes, skey_hash_bytes)) return false;    
+    
+    boost::multiprecision::uint256_t skey;
+    boost::multiprecision::import_bits(skey, skey_hash_bytes.begin(), skey_hash_bytes.end(), 8, true);            
+    sec_keys.push_back(skey);            
+   }
+
+  isSetSecKeys = true;
+  return true;
 }
 
 bool CXKeys::ComputeSubKeys() {
 
 	 boost::recursive_mutex::scoped_lock lLock(r_mtx);
+	 
+	 if (!isSetSecKeys) return false;
 	 
     cs_seck = 0; cs_pubk = 0; cs_proof = 0; pubkey=0;
     pub_keys.clear();
@@ -123,11 +170,12 @@ bool CXKeys::ComputeSubKeys() {
     
 }
 
+
 bool CXKeys::SaveKeys(CFileSystem &fs) {
 	
 		boost::recursive_mutex::scoped_lock lLock(r_mtx);
 		if (!fValid) return false;
-		return fs.saveSecKeys(sec_keys);
+		return fs.saveSecKey(seckey);
 }
 
 bool CXKeys::SavePubkey(CFileSystem &fs) {
@@ -138,14 +186,17 @@ bool CXKeys::SavePubkey(CFileSystem &fs) {
 }
 
 
-bool CXKeys::SetKeys(const std::vector<boost::multiprecision::uint256_t> &keys_in, const boost::multiprecision::uint256_t &pubkey_in)
+bool CXKeys::SetKeys(const boost::multiprecision::uint256_t &seckey_in, const boost::multiprecision::uint256_t &pubkey_in)
 {
 	fValid = false;
 	sec_keys.clear();
-	for (int i = 0; i < 8192; i++) {
-	   sec_keys.push_back(keys_in[i]);
-	}
-	if (!ComputeSubKeys()) return false;
+
+	seckey = seckey_in;	
+	isSetSecKey = true;
+	
+   if (!ComputeSecKeys()) return false;
+
+	if (!ComputeSubKeys()) return false;			
 		
 	if (pubkey != pubkey_in) return false;
 	
@@ -158,11 +209,16 @@ bool CXKeys::LoadKeys(CFileSystem &fs) {
 	
 		boost::recursive_mutex::scoped_lock lLock(r_mtx);
 		if (fValid) return false;
-		if (fs.loadSecKeys(sec_keys)) {  
-	      if (ComputeSubKeys()) {
-           fValid = true;
-           return true;	      
-	      }
+		if (fs.loadSecKey(seckey)) {
+			isSetSecKey = true;
+			if (ComputeSecKeys()) {
+		      if (ComputeSubKeys()) {
+	           fValid = true;
+	           return true;	      
+		      }
+			
+			}
+			  
 		}
       return false;
 }
@@ -235,7 +291,7 @@ bool CXPubKeys::IsValid() {
           return fValid; 
       }
 
-bool CXPubKeys::SetPubkey(boost::multiprecision::uint256_t &pubkey_in) {	   
+bool CXPubKeys::SetPubkey(const boost::multiprecision::uint256_t &pubkey_in) {	   
 	   boost::recursive_mutex::scoped_lock lLock(r_mtx); 
 	   if (fValid) return false;
       pubkey = pubkey_in;

@@ -26,8 +26,9 @@ TEST(CXKeys, MakeNewKeys) {
 	 CXKeys keys;	 
 	 EXPECT_FALSE(keys.IsValid());
     keys.MakeNewKeys();
-    EXPECT_TRUE(keys.IsValid());
+    EXPECT_TRUE(keys.IsValid());    
 }
+
 
 TEST(CXKeys, Reset) {
 	 CXKeys keys;	 
@@ -41,35 +42,17 @@ TEST(CXKeys, Reset) {
 
 TEST(CXKeys, SetKeys) {
     CXKeys keys;
-    std::vector<boost::multiprecision::uint256_t> t1_sec_keys;
-    for (int i = 0; i < 8192; i++) {
-       boost::multiprecision::uint256_t skey;
-       std::vector<std::byte> skey_bytes;       
-       skey_bytes.resize(32);
-       memcpy(&skey_bytes[0], &t1_sec_keys_uc[32*i], 32);         	       	    	    
-	    boost::multiprecision::import_bits(skey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
-	    t1_sec_keys.push_back(skey);    
-    }
-    EXPECT_TRUE(keys.SetKeys(t1_sec_keys, t1_pubkey)); 
+    EXPECT_TRUE(keys.SetKeys(t1_seckey, t1_pubkey)); 
     EXPECT_TRUE(keys.IsValid());
-    t1_sec_keys[0]=0;
-    EXPECT_FALSE(keys.SetKeys(t1_sec_keys, t1_pubkey)); 
+    EXPECT_FALSE(keys.SetKeys(0, t1_pubkey)); 
 }
+
 
 TEST(CXKeys, SaveKeys) {
 	 CXKeys keys;	 
 	 EXPECT_FALSE(keys.IsValid());
 	 
-    std::vector<boost::multiprecision::uint256_t> t1_sec_keys;    
-    for (int i = 0; i < 8192; i++) {
-       boost::multiprecision::uint256_t skey;
-       std::vector<std::byte> skey_bytes;       
-       skey_bytes.resize(32);
-       memcpy(&skey_bytes[0], &t1_sec_keys_uc[32*i], 32);         	       	    	    
-	    boost::multiprecision::import_bits(skey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
-	    t1_sec_keys.push_back(skey);    
-    }
-    EXPECT_TRUE(keys.SetKeys(t1_sec_keys, t1_pubkey));
+    EXPECT_TRUE(keys.SetKeys(t1_seckey, t1_pubkey));
 
     EXPECT_TRUE(keys.IsValid());
     
@@ -81,20 +64,12 @@ TEST(CXKeys, SaveKeys) {
     EXPECT_FALSE(keys.SaveKeys(fsystem));
 }
 
+
 TEST(CXKeys, SavePubkey) {
 	 CXKeys keys;	 
 	 EXPECT_FALSE(keys.IsValid());
-    std::vector<boost::multiprecision::uint256_t> t1_sec_keys;    
-    for (int i = 0; i < 8192; i++) {
-       boost::multiprecision::uint256_t skey;
-       std::vector<std::byte> skey_bytes;       
-       skey_bytes.resize(32);
-       memcpy(&skey_bytes[0], &t1_sec_keys_uc[32*i], 32);         	       	    	    
-	    boost::multiprecision::import_bits(skey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
-	    t1_sec_keys.push_back(skey);    
-    }
-
-    EXPECT_TRUE(keys.SetKeys(t1_sec_keys, t1_pubkey));
+    
+    EXPECT_TRUE(keys.SetKeys(t1_seckey, t1_pubkey));
     EXPECT_TRUE(keys.IsValid());
     
     Poco::TemporaryFile temp;
@@ -105,18 +80,12 @@ TEST(CXKeys, SavePubkey) {
     EXPECT_FALSE(keys.SavePubkey(fsystem));
 }
 
+
+
 TEST(CXKeys, GetPubkey) {
     CXKeys keys;
-    std::vector<boost::multiprecision::uint256_t> t1_sec_keys;    
-    for (int i = 0; i < 8192; i++) {
-       boost::multiprecision::uint256_t skey;
-       std::vector<std::byte> skey_bytes;       
-       skey_bytes.resize(32);
-       memcpy(&skey_bytes[0], &t1_sec_keys_uc[32*i], 32);         	       	    	    
-	    boost::multiprecision::import_bits(skey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
-	    t1_sec_keys.push_back(skey);    
-    }
-    EXPECT_TRUE(keys.SetKeys(t1_sec_keys, t1_pubkey));
+    
+    EXPECT_TRUE(keys.SetKeys(t1_seckey, t1_pubkey));
     EXPECT_TRUE(keys.IsValid());
     boost::multiprecision::uint256_t pubkey; 
     pubkey = keys.GetPubkey();
@@ -131,23 +100,14 @@ TEST(CXKeys, LoadKeys) {
     CFileSystem fsystem(temp.path());
  
     CXKeys keys;   
-    EXPECT_FALSE(keys.IsValid());
-    std::vector<boost::multiprecision::uint256_t> t1_sec_keys;    
-    for (int i = 0; i < 8192; i++) {
-       boost::multiprecision::uint256_t skey;
-       std::vector<std::byte> skey_bytes;       
-       skey_bytes.resize(32);
-       memcpy(&skey_bytes[0], &t1_sec_keys_uc[32*i], 32);         	       	    	    
-	    boost::multiprecision::import_bits(skey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
-	    t1_sec_keys.push_back(skey);    
-    }
-    EXPECT_TRUE(keys.SetKeys(t1_sec_keys, t1_pubkey));
+    EXPECT_FALSE(keys.IsValid());    
+    EXPECT_TRUE(keys.SetKeys(t1_seckey, t1_pubkey));
     EXPECT_TRUE(keys.IsValid());   
     EXPECT_FALSE(keys.LoadKeys(fsystem));
     keys.Reset();
     EXPECT_FALSE(keys.IsValid());
     EXPECT_FALSE(keys.LoadKeys(fsystem));
-    EXPECT_TRUE(keys.SetKeys(t1_sec_keys, t1_pubkey));
+    EXPECT_TRUE(keys.SetKeys(t1_seckey, t1_pubkey));
     EXPECT_TRUE(keys.IsValid());   
     EXPECT_TRUE(keys.SaveKeys(fsystem));
     keys.Reset();
@@ -158,22 +118,15 @@ TEST(CXKeys, LoadKeys) {
     EXPECT_TRUE( pubkey == t1_pubkey ); 
 }
 
+
 TEST(CXKeys, SignMsgHash) {    
     CXKeys keys;   
     EXPECT_FALSE(keys.IsValid());
     boost::multiprecision::uint256_t msgHash;
     std::vector<boost::multiprecision::uint256_t> signature_out;
     EXPECT_FALSE(keys.SignMsgHash(msgHash, signature_out));
-    std::vector<boost::multiprecision::uint256_t> t1_sec_keys;    
-    for (int i = 0; i < 8192; i++) {
-       boost::multiprecision::uint256_t skey;
-       std::vector<std::byte> skey_bytes;       
-       skey_bytes.resize(32);
-       memcpy(&skey_bytes[0], &t1_sec_keys_uc[32*i], 32);         	       	    	    
-	    boost::multiprecision::import_bits(skey, skey_bytes.begin(), skey_bytes.end(), 8, true);       	    	    	    
-	    t1_sec_keys.push_back(skey);    
-    }
-    EXPECT_TRUE(keys.SetKeys(t1_sec_keys, t1_pubkey));
+      
+    EXPECT_TRUE(keys.SetKeys(t1_seckey, t1_pubkey));
     EXPECT_TRUE(keys.IsValid());
     msgHash=0;          
     
@@ -182,6 +135,7 @@ TEST(CXKeys, SignMsgHash) {
     for (size_t i = 0; i < signature_out.size(); i++) {
     	uint256Insert(signature_out[i],signature_bytes);
     }
+       
     EXPECT_TRUE( 0 == std::memcmp( signature_bytes.data(), t1_signature_uc, sizeof( t1_signature_uc ) ) );
     EXPECT_TRUE(keys.SignMsgHash(t2_message_hash, signature_out));
     signature_bytes.clear();
@@ -190,6 +144,7 @@ TEST(CXKeys, SignMsgHash) {
     }
     EXPECT_FALSE( 0 == std::memcmp( signature_bytes.data(), t1_signature_uc, sizeof( t1_signature_uc ) ) );         
 }
+
 
 TEST(CXPubKeys, SetPubkey) {
 	 CXPubKeys pubkeys;	 

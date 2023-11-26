@@ -29,10 +29,10 @@ class CFileSystem
 {
 public:
 
-  		CFileSystem(const Poco::Path &_base);
-      bool saveSecKeys(const std::vector<boost::multiprecision::uint256_t> &sec_keys_in);
+  		CFileSystem(const Poco::Path &_base);      
+      bool saveSecKey(const boost::multiprecision::uint256_t &seckey_in);
       bool savePubkey(const boost::multiprecision::uint256_t &pubkey_in);
-      bool loadSecKeys(std::vector<boost::multiprecision::uint256_t> &sec_keys_out);
+      bool loadSecKey(boost::multiprecision::uint256_t &sec_keys_out);
   		
 private:
 

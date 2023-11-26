@@ -24,7 +24,7 @@ CFileSystem::CFileSystem(const Poco::Path &_base) {
       Poco::File(base).createDirectories();
 } 
 
-
+/*
 bool CFileSystem::saveSecKeys(const std::vector<boost::multiprecision::uint256_t> &sec_keys_in) {
 
    boost::recursive_mutex::scoped_lock lLock(r_mtx);
@@ -47,7 +47,7 @@ bool CFileSystem::saveSecKeys(const std::vector<boost::multiprecision::uint256_t
 
    }
    return false;
-}
+}*/
 
 bool CFileSystem::savePubkey(const boost::multiprecision::uint256_t &pubkey_in) {
 
@@ -71,33 +71,49 @@ bool CFileSystem::savePubkey(const boost::multiprecision::uint256_t &pubkey_in) 
 }
 
 
+bool CFileSystem::saveSecKey(const boost::multiprecision::uint256_t &seckey_in) {
 
-bool CFileSystem::loadSecKeys( std::vector<boost::multiprecision::uint256_t> &sec_keys_out ) {
+   boost::recursive_mutex::scoped_lock lLock(r_mtx);
+   Poco::File fPrintFile(Poco::Path(base, std::string("secret.key")));
+   if (fPrintFile.createFile()) {
+
+      Poco::FileOutputStream fos(fPrintFile.path(), std::ios::binary);
+      if (fos.good()) {
+			Poco::BinaryWriter writer(fos);
+
+			std::vector<std::byte> raw_bytes;    
+         uint256Insert(seckey_in, raw_bytes);    
+         writer.writeRaw((const char*)raw_bytes.data(), raw_bytes.size());
+         fos.close();
+         return fos.good();
+      }      
+
+   }
+   return false;
+}
+
+
+bool CFileSystem::loadSecKey( boost::multiprecision::uint256_t &sec_keys_out ) {
  
    boost::recursive_mutex::scoped_lock lLock(r_mtx);
-   Poco::File secKeyFile(Poco::Path(base, std::string("secret.keys")));
+   Poco::File secKeyFile(Poco::Path(base, std::string("secret.key")));
    if (secKeyFile.exists()) {
 			Poco::FileInputStream *fis = new Poco::FileInputStream(secKeyFile.path(), std::ios::binary); 
-         int count = 0;
-         sec_keys_out.clear();
-			while ( (!fis->eof()) && ( count < 8192 ) ) {
+
+			while ( (!fis->eof())) {
 				 std::vector<std::byte> raw_bytes;
 				 raw_bytes.resize(32);
              fis->read( reinterpret_cast<char*>(raw_bytes.data()) , 32);
              
              std::streamsize len = fis->gcount();
-				 if (len == 32) {
-					count++;
-					boost::multiprecision::uint256_t skey;	    	    
-	            boost::multiprecision::import_bits(skey, raw_bytes.begin(), raw_bytes.end(), 8, true);       	    	    	    
-	            sec_keys_out.push_back(skey);   
-
+				 if (len == 32) {    	    
+	            boost::multiprecision::import_bits(sec_keys_out, raw_bytes.begin(), raw_bytes.end(), 8, true);       	    	    	       
 				 }	else break;             
 			}
          fis->close(); 
-         if (count != 8192) return false;
+
          return true;
-   }
+   }   
    return false;
 }
 

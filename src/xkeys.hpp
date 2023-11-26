@@ -27,7 +27,7 @@ public:
   		CXPubKeys();
   		
   		void Reset();
-  		bool SetPubkey(boost::multiprecision::uint256_t &pubkey_in);
+  		bool SetPubkey(const boost::multiprecision::uint256_t &pubkey_in);
   		bool SetMessageHash(boost::multiprecision::uint256_t &msghash_in);
   		bool SignatureIsValid(std::vector<boost::multiprecision::uint256_t> &signature_in);
       bool IsValid();
@@ -65,7 +65,8 @@ public:
 
       void MakeNewKeys();
       bool ComputeSubKeys();
-      bool SetKeys(const std::vector<boost::multiprecision::uint256_t> &keys_in, const boost::multiprecision::uint256_t &pubkey_in);      
+      bool ComputeSecKeys();
+      bool SetKeys(const boost::multiprecision::uint256_t &seckey_in, const boost::multiprecision::uint256_t &pubkey_in);      
       bool SaveKeys(CFileSystem &fs);
       bool SavePubkey(CFileSystem &fs);
       bool LoadKeys(CFileSystem &fs);
@@ -77,7 +78,8 @@ private:
       boost::recursive_mutex r_mtx;
 
       bool fValid;
-      bool isSetSeckeys;
+      bool isSetSecKey;
+      bool isSetSecKeys;
 
       std::vector<boost::multiprecision::uint256_t> sec_keys;    
       std::vector<boost::multiprecision::uint256_t> pub_keys;
@@ -87,6 +89,7 @@ private:
       boost::multiprecision::uint256_t cs_pubk;
       boost::multiprecision::uint256_t cs_proof;
       
+      boost::multiprecision::uint256_t seckey;
       boost::multiprecision::uint256_t pubkey;      
 
 };
